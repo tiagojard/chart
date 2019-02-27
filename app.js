@@ -3,7 +3,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 var clients = {}; 
-
+const port = process.env.PORT || 3000
 app.get('/', function(req, res){
      // Website you wish to allow to connect
      res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,6 +43,6 @@ io.on("connection", function (client) {
 });
 
 
-http.listen(3000, function(){
+http.listen(port, function(){
   console.log('listening on port 3000');
 });
