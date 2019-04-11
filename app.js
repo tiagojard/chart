@@ -3,7 +3,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 var clients = {}; 
-const port = process.env.PORT || 3000
+var mensagens = [];
 app.get('/', function(req, res){
      // Website you wish to allow to connect
      res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +19,7 @@ app.get('/', function(req, res){
      // Set to true if you need the website to include cookies in the requests sent
      // to the API (e.g. in case you use sessions)
      res.setHeader('Access-Control-Allow-Credentials', true);
-    res.send('Todas as informações pessoais coletadas de nossos membros são confidenciais. Isto inclui os dados pessoais fornecidos durante os processos do registro e informações financeiras dos clientes.');
+    res.send(JSON.stringify(mensagens));
 });
 
 io.on("connection", function (client) {  
@@ -30,10 +30,39 @@ io.on("connection", function (client) {
         client.broadcast.emit("update", name + " has joined the server.")
     });
 
-    client.on("send", function(msg){
+    client.on("send", function(conversa,msg){
+        mensagens.push(msg);//Salva mensagem no array
     	console.log("Message: " + msg);
-        client.broadcast.emit("chat", clients[client.id], msg);
+        client.broadcast.emit(conversa, clients[client.id], msg);
     });
+
+    client.on("receive", function(conversa){
+        mensagens = mensagens.filter(item => {  return item.destinatario == conversa;  });
+
+        
+        //let mensagensNaoRecebidas = mensagens.filter(item => {  return item.remetente == conversa;  });
+        //console.log(`receive${conversa}: ` + mensagensNaoRecebidas);
+        client.emit(`receive${conversa}`, mensagens);
+    });
+
+    client.on("receiveUpdate", function(conversa){
+        mensagens = mensagens.filter(item => {  return item.destinatario != conversa;  });
+        //console.log(`receive${conversa}: ` + mensagensNaoRecebidas);
+        //io.emit("update", clients[client.id] + " array update.");
+        //client.broadcast.emit(`receive${conversa}`, clients[client.id], JSON.stringify(mensagensNaoRecebidas));
+    });
+
+    client.on("online", function(contato,data){
+    	console.log("online "+contato+" "+data);
+        client.broadcast.emit(`status${contato}`, clients[client.id], data);
+    });
+
+    client.on("off", function(contato, data){
+    	console.log("off");
+        io.emit(`status${contato}`, clients[client.id], data);
+        delete clients[client.id];
+    });
+
 
     client.on("disconnect", function(){
     	console.log("Disconnect");
@@ -43,6 +72,6 @@ io.on("connection", function (client) {
 });
 
 
-http.listen(port, function(){
+http.listen(3000, function(){
   console.log('listening on port 3000');
 });
